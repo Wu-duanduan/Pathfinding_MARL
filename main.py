@@ -15,7 +15,7 @@ from Method import getReward, setup_seed
 from draw import Painter
 import torch.nn.functional as F
 
-
+#123
 def get_trainers(numberOfAgents, obs_shape_n, action_shape_n, arglist):
     """
     初始化每个agent的4个网络，用列表存储
