@@ -6,7 +6,6 @@ import torch
 import random
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#456
 
 def getReward(obsCenterNext, qNext, q, qBefore, goal, iifds):
     """
