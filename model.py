@@ -6,7 +6,6 @@ actor 和 critic网络架构来源于openAI开源代码spinningup强化学习算
 import torch
 import torch.nn as nn
 
-#123
 def mlp(sizes, activation, output_activation=nn.Identity):
     layers = []
     for j in range(len(sizes) - 1):
