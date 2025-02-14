@@ -3,7 +3,6 @@
 import argparse
 import torch
 
-#123
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def parse_args():
