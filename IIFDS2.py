@@ -195,10 +195,38 @@ class IIFDS:
 
     def calRepulsiveMatrix2(self, uavPos, obsCenter, cylinderR, row0, goal):
         n = self.partialDerivativeSphere2(obsCenter, uavPos, cylinderR)
+        # --- 数值稳定性修复开始 ---
+        epsilon = 1e-6  # 定义一个小量，防止除零
+
+        # 1. 防止 exp() 溢出或下溢
         tempD = self.distanceCost(uavPos[0:2], obsCenter[0:2]) - cylinderR
-        row = row0 * np.exp(1 - 1 / (self.distanceCost(uavPos, goal) * tempD))
+        dist_to_goal = self.distanceCost(uavPos, goal)
+
+        denominator_product = dist_to_goal * tempD
+
+        # 防止分母积接近于零
+        if -epsilon < denominator_product < epsilon:
+            denominator_product = epsilon if denominator_product >= 0 else -epsilon
+
+        exponent_arg = 1 - 1 / denominator_product
+
+        # 2. 裁剪 exp() 的参数，防止溢出
+        exponent_arg_clipped = np.clip(exponent_arg, -700, 700)  # np.exp(710) 接近溢出
+
+        row = row0 * np.exp(exponent_arg_clipped)
+
+        # 3. 防止 row 为 0 导致 1/row 无穷大
+        if abs(row) < epsilon:
+            row = np.sign(row) * epsilon if row != 0 else epsilon
+        # --- 数值稳定性修复结束 ---
+
         T = self.calculateT2(obsCenter, uavPos, cylinderR)
-        repulsiveMatrix = np.dot(-n, n.T) / T ** (1 / row) / np.dot(n.T, n)[0][0]
+
+        # 4. 为所有分母添加 epsilon，防止除零
+        denominator1 = T ** (1 / row) + epsilon
+        denominator2 = np.dot(n.T, n)[0][0] + epsilon
+
+        repulsiveMatrix = np.dot(-n, n.T) / denominator1 / denominator2
         return repulsiveMatrix
 
     def calTangentialMatrix2(self, uavPos, obsCenter, cylinderR, theta, sigma0, goal):
@@ -212,9 +240,37 @@ class IIFDS:
             -1, 1)
         originalPoint = np.array([np.cos(theta), np.sin(theta), 0]).reshape(1, -1)
         tk = self.trans(originalPoint, tk1.squeeze(), tk2.squeeze(), n.squeeze())
+        # --- 数值稳定性修复开始 ---
+        epsilon = 1e-6  # 定义一个小量，防止除零
+
+        # 1. 防止 exp() 溢出或下溢
         tempD = self.distanceCost(uavPos[0:2], obsCenter[0:2]) - cylinderR
-        sigma = sigma0 * np.exp(1 - 1 / (self.distanceCost(uavPos, goal) * tempD))
-        tangentialMatrix = tk.dot(n.T) / T ** (1 / sigma) / self.calVecLen(tk.squeeze()) / self.calVecLen(n.squeeze())
+        dist_to_goal = self.distanceCost(uavPos, goal)
+
+        denominator_product = dist_to_goal * tempD
+
+        # 防止分母积接近于零
+        if -epsilon < denominator_product < epsilon:
+            denominator_product = epsilon if denominator_product >= 0 else -epsilon
+
+        exponent_arg = 1 - 1 / denominator_product
+
+        # 2. 裁剪 exp() 的参数，防止溢出
+        exponent_arg_clipped = np.clip(exponent_arg, -700, 700)
+
+        sigma = sigma0 * np.exp(exponent_arg_clipped)
+
+        # 3. 防止 sigma 为 0 导致 1/sigma 无穷大
+        if abs(sigma) < epsilon:
+            sigma = np.sign(sigma) * epsilon if sigma != 0 else epsilon
+        # --- 数值稳定性修复结束 ---
+
+        # 4. 为所有分母添加 epsilon，防止除零
+        denominator1 = T ** (1 / sigma) + epsilon
+        denominator2 = self.calVecLen(tk.squeeze()) + epsilon
+        denominator3 = self.calVecLen(n.squeeze()) + epsilon
+
+        tangentialMatrix = tk.dot(n.T) / denominator1 / denominator2 / denominator3
         return tangentialMatrix
 
     def getqNext(self, i, q, obsCenter, vObs, row0, sigma0, theta, qBefore, goal):

@@ -6,7 +6,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchsummary import summary
 from arguments import parse_args
 from IIFDS2 import IIFDS
 from replay_buffer import ReplayBuffer
